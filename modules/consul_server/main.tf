@@ -1,3 +1,37 @@
+resource "aws_iam_role" "consul_role" {
+  name = "consul_role"
+
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Effect = "Allow",
+      Principal = {
+        Service = "ec2.amazonaws.com"
+      },
+      Action = "sts:AssumeRole"
+    }]
+  })
+}
+
+
+resource "aws_iam_role_policy_attachment" "consul_ssm" {
+  role       = aws_iam_role.consul_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
+
+resource "aws_iam_role_policy_attachment" "consul_ecr" {
+  role       = aws_iam_role.consul_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryFullAccess"
+}
+
+
+resource "aws_iam_instance_profile" "consul_profile" {
+  name = "consul_profile"
+  role = aws_iam_role.consul_role.name
+}
+
 
 resource "aws_instance" "consul_server" {
   ami                    = var.ami_id
@@ -5,6 +39,7 @@ resource "aws_instance" "consul_server" {
   subnet_id              = var.private_subnet_id
   vpc_security_group_ids = [var.sg_id]
   associate_public_ip_address = false
+  iam_instance_profile   = aws_iam_instance_profile.consul_profile.name
 
   tags = {
     Name = "Consul Server"
